@@ -3,34 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Football Stream</title>
+    <title>High Quality Stream</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        /* Reset margins to ensure full screen */
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
-            background-color: black;
-            overflow: hidden; /* Hides scrollbars */
-        }
-
-        /* Make the iframe take up the entire window */
-        iframe {
-            border: none;
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
+        body { margin: 0; background-color: black; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        video { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
 
-    <iframe 
-        src="https://streaming2024.github.io/nirutv/jwplyrr.html?src=https://rumble.com/live-hls-dvr/6zoyqy/playlist.m3u8" 
-        allowfullscreen
-        allow="autoplay; encrypted-media">
-    </iframe>
+    <video id="video" controls></video>
+
+    <script>
+        // The Rumble Stream Link
+        const videoSrc = "https://rumble.com/live-hls-dvr/6zoyqy/playlist.m3u8"; 
+        const video = document.getElementById('video');
+
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                // This setting tells the player to start loading at the Highest Quality immediately
+                startLevel: -1 // -1 is auto, but we will force it below
+            });
+
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                // 1. FORCE HIGHEST QUALITY
+                // This finds the highest quality level available in the stream and locks it.
+                // It prevents the video from starting blurry.
+                hls.currentLevel = hls.levels.length - 1;
+                
+                // 2. ATTEMPT TO UNMUTE
+                video.muted = false; 
+                
+                // 3. PLAY
+                var playPromise = video.play();
+
+                // This catches the browser error if it blocks sound
+                if (playPromise !== undefined) {
+                    playPromise.then(_ => {
+                        // Autoplay started!
+                    })
+                    .catch(error => {
+                        // Auto-play was prevented by the browser because sound is on.
+                        console.log("Browser blocked unmuted autoplay. Waiting for user click.");
+                    });
+                }
+            });
+        }
+        // For Safari (iPhones/Macs) which uses native player
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = videoSrc;
+            video.muted = false;
+            video.play();
+        }
+    </script>
 
 </body>
 </html>
