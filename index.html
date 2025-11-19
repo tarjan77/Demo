@@ -3,77 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Direct Stream - ID 1</title>
+    <title>Multi-Stream Player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        body { margin: 0; background-color: black; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        video { width: 100%; height: 100%; max-height: 100vh; }
+        body { margin: 0; background-color: black; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* The Container for Video and Iframe */
+        #screen-container {
+            position: relative;
+            flex-grow: 1; /* Takes up all remaining space */
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        video, iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Hidden by default */
+        .hidden { display: none !important; }
+
+        /* The Button Bar */
+        #controls {
+            background: #1a1a1a;
+            padding: 10px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 10px 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        button:hover { background: #555; }
+        button.active { background: #d92525; border-color: #ff0000; }
     </style>
 </head>
 <body>
 
-    <video id="video" controls autoplay playsinline></video>
+    <div id="screen-container">
+        <video id="hls-player" controls playsinline class="hidden"></video>
+
+        <iframe id="web-player" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" class="hidden"></iframe>
+    </div>
+
+    <div id="controls">
+        <button onclick="playStream('1')" id="btn-1">Link 1 (Main)</button>
+        <button onclick="playStream('2')" id="btn-2">Link 2</button>
+        <button onclick="playStream('3')" id="btn-3">Link 3</button>
+        <button onclick="playStream('4')" id="btn-4">Link 4 (Kick)</button>
+        <button onclick="playStream('5')" id="btn-5">Link 5 (Trovo)</button>
+    </div>
 
     <script>
-        // WE EXTRACTED THIS FROM YOUR SCRIPT:
-        const streamUrl = "https://npl-live.pages.dev/yonotv.m3u8"; 
-        
-        const video = document.getElementById('video');
+        // 1. PASTE THE SOURCES YOU FOUND HERE
+        const streams = {
+            "1": "https://npl-live.pages.dev/yonotv.m3u8",
+            "2": "https://fuck-you.kasin-tv.com/fc/play.php?id=138296",
+            "3": "https://mugi-aafai-garna.kasin-tv.com/hi/play.php?id=138295",
+            "4": "https://player.kick.com/wicketgoal?autoplay=true",
+            "5": "https://trovo.live/s/2aa5b2f8e1e5ff58e01ff7819/234276596?adtag=user.2aa5b2f8e1e5ff58e01ff7819.clip"
+        };
 
-        if (Hls.isSupported()) {
-            const hls = new Hls({
-                // Start loading data immediately
-                autoStartLoad: true
-            });
+        let hls = null;
+        const videoEl = document.getElementById('hls-player');
+        const iframeEl = document.getElementById('web-player');
 
-            hls.loadSource(streamUrl);
-            hls.attachMedia(video);
+        function playStream(id) {
+            const url = streams[id];
+            
+            // Reset Buttons
+            document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + id).classList.add('active');
 
-            hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+            // 1. IF IT IS AN M3U8 LINK (Use High Quality Player)
+            if (url.includes('.m3u8')) {
+                iframeEl.classList.add('hidden');
+                iframeEl.src = ""; // Stop iframe audio
+                videoEl.classList.remove('hidden');
                 
-                // 1. FORCE HIGHEST QUALITY (Max Resolution)
-                // This finds the last level (usually 1080p) and locks it.
-                if (hls.levels.length > 0) {
-                    hls.currentLevel = hls.levels.length - 1;
-                }
-
-                // 2. UNMUTE AND PLAY
-                video.muted = false; 
+                loadHLS(url);
+            } 
+            // 2. IF IT IS A WEBSITE LINK (Use Iframe)
+            else {
+                if(hls) hls.destroy(); // Stop HLS audio
+                videoEl.pause();
+                videoEl.classList.add('hidden');
+                iframeEl.classList.remove('hidden');
                 
-                var playPromise = video.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.log("Browser blocked audio. Click screen to play.");
-                    });
-                }
-            });
+                iframeEl.src = url;
+            }
+        }
 
-            // Handle errors (like if the stream goes offline)
-            hls.on(Hls.Events.ERROR, function (event, data) {
-                if (data.fatal) {
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.log("Network error, trying to recover...");
-                            hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.log("Media error, trying to recover...");
-                            hls.recoverMediaError();
-                            break;
-                        default:
-                            hls.destroy();
-                            break;
+        function loadHLS(source) {
+            if (Hls.isSupported()) {
+                if(hls) hls.destroy(); // Clean up previous stream
+                hls = new Hls();
+                hls.loadSource(source);
+                hls.attachMedia(videoEl);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    // Force High Quality
+                    if(hls.levels.length > 0) {
+                        hls.currentLevel = hls.levels.length - 1;
                     }
-                }
-            });
+                    videoEl.muted = false;
+                    videoEl.play().catch(e => console.log("Browser blocked autoplay"));
+                });
+            } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+                videoEl.src = source;
+                videoEl.muted = false;
+                videoEl.play();
+            }
         }
-        // Fallback for Safari (iPhone/iPad/Mac)
-        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = streamUrl;
-            video.muted = false;
-            video.play();
-        }
-    </script>
 
+        // Start with Link 1 automatically
+        playStream('1');
+
+    </script>
 </body>
 </html>
