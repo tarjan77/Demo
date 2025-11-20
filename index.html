@@ -3,136 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Stream Player</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <title>Kick Stream</title>
     <style>
-        body { margin: 0; background-color: black; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-        
-        /* The Container for Video and Iframe */
-        #screen-container {
-            position: relative;
-            flex-grow: 1; /* Takes up all remaining space */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
             width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            background-color: black;
+            overflow: hidden;
         }
 
-        video, iframe {
+        iframe {
+            border: none;
             width: 100%;
             height: 100%;
-            border: none;
-            position: absolute;
-            top: 0;
-            left: 0;
+            display: block;
         }
-
-        /* Hidden by default */
-        .hidden { display: none !important; }
-
-        /* The Button Bar */
-        #controls {
-            background: #1a1a1a;
-            padding: 10px;
-            text-align: center;
-            z-index: 10;
-        }
-
-        button {
-            background: #333;
-            color: white;
-            border: 1px solid #555;
-            padding: 10px 20px;
-            margin: 0 5px;
-            cursor: pointer;
-            font-weight: bold;
-            border-radius: 4px;
-        }
-
-        button:hover { background: #555; }
-        button.active { background: #d92525; border-color: #ff0000; }
     </style>
 </head>
 <body>
 
-    <div id="screen-container">
-        <video id="hls-player" controls playsinline class="hidden"></video>
+    <iframe 
+        src="https://player.kick.com/video/afc68d4c-4471-400e-9ec6-2c4f5e16a28e?autoplay=true" 
+        allowfullscreen
+        allow="autoplay; encrypted-media; picture-in-picture">
+    </iframe>
 
-        <iframe id="web-player" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" class="hidden"></iframe>
-    </div>
-
-    <div id="controls">
-        <button onclick="playStream('1')" id="btn-1">Link 1 (Main)</button>
-        <button onclick="playStream('2')" id="btn-2">Link 2</button>
-        <button onclick="playStream('3')" id="btn-3">Link 3</button>
-        <button onclick="playStream('4')" id="btn-4">Link 4 (Kick)</button>
-        <button onclick="playStream('5')" id="btn-5">Link 5 (Trovo)</button>
-    </div>
-
-    <script>
-        // 1. PASTE THE SOURCES YOU FOUND HERE
-        const streams = {
-            "1": "https://npl-live.pages.dev/yonotv.m3u8",
-            "2": "https://fuck-you.kasin-tv.com/fc/play.php?id=138296",
-            "3": "https://mugi-aafai-garna.kasin-tv.com/hi/play.php?id=138295",
-            "4": "https://player.kick.com/wicketgoal?autoplay=true",
-            "5": "https://trovo.live/s/2aa5b2f8e1e5ff58e01ff7819/234276596?adtag=user.2aa5b2f8e1e5ff58e01ff7819.clip"
-        };
-
-        let hls = null;
-        const videoEl = document.getElementById('hls-player');
-        const iframeEl = document.getElementById('web-player');
-
-        function playStream(id) {
-            const url = streams[id];
-            
-            // Reset Buttons
-            document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-            document.getElementById('btn-' + id).classList.add('active');
-
-            // 1. IF IT IS AN M3U8 LINK (Use High Quality Player)
-            if (url.includes('.m3u8')) {
-                iframeEl.classList.add('hidden');
-                iframeEl.src = ""; // Stop iframe audio
-                videoEl.classList.remove('hidden');
-                
-                loadHLS(url);
-            } 
-            // 2. IF IT IS A WEBSITE LINK (Use Iframe)
-            else {
-                if(hls) hls.destroy(); // Stop HLS audio
-                videoEl.pause();
-                videoEl.classList.add('hidden');
-                iframeEl.classList.remove('hidden');
-                
-                iframeEl.src = url;
-            }
-        }
-
-        function loadHLS(source) {
-            if (Hls.isSupported()) {
-                if(hls) hls.destroy(); // Clean up previous stream
-                hls = new Hls();
-                hls.loadSource(source);
-                hls.attachMedia(videoEl);
-                hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    // Force High Quality
-                    if(hls.levels.length > 0) {
-                        hls.currentLevel = hls.levels.length - 1;
-                    }
-                    videoEl.muted = false;
-                    videoEl.play().catch(e => console.log("Browser blocked autoplay"));
-                });
-            } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-                videoEl.src = source;
-                videoEl.muted = false;
-                videoEl.play();
-            }
-        }
-
-        // Start with Link 1 automatically
-        playStream('1');
-
-    </script>
 </body>
 </html>
